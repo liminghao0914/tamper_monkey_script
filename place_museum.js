@@ -20,7 +20,22 @@
   // get body
   var body = document.getElementsByTagName("body")[0];
 
-  var record = { title: window.location.href };
+  // initialize record
+  var record = {
+    title: document.title,
+    url: window.location.href,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    deviceScaleFactor: window.devicePixelRatio,
+    isMobile: window.navigator.userAgent.match(
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
+    ),
+    hasTouch: window.navigator.userAgent.match(
+      /iPhone|iPad|iPod|BlackBerry|IEMobile/i
+    ),
+    isLandscape: window.innerWidth > window.innerHeight,
+  };
+
   // read json
   if (localStorage.getItem("record") == null) {
     // save json
@@ -107,46 +122,107 @@
         time: (Date.now() / 1000) | 0,
         event: "pageend",
       };
-      modifyRecords("scrolls",scroll);
+      modifyRecords("scrolls", scroll);
     }
   });
 
   // add onready listener
-  document.addEventListener("readystatechange", function(){
+  document.addEventListener("readystatechange", function () {
     var scroll = {
       title: window.location.href,
       time: (Date.now() / 1000) | 0,
       event: "pagestart",
     };
-    modifyRecords("scrolls",scroll);
-  })
+    modifyRecords("scrolls", scroll);
+  });
 
-  async function createVideoRecorder() {
-    let stream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: true,
-    });
-    // recording in mp4 format
+  // add onclick listener
+  document.addEventListener("click", function (event) {
+    try {
+      var target = event.target;
+      console.log(target);
+      // template for click
+      var click = {
+        title: target.innerText,
+        tag: target.tagName,
+        type: "body",
+        time: (Date.now() / 1000) | 0,
+        offsetX: target.offsetLeft,
+        offsetY: target.offsetTop,
+        mouseX: event.clientX,
+        mouseY: event.clientY,
+        selectors: makeSelector(target),
+      };
+      // check if header
+      checkIfHeader("header", target, click);
+      modifyRecords("clicks", click);
+    } catch (e) {
+      console.log(e);
+    }
+  });
 
-    let mime = MediaRecorder.isTypeSupported("video/webm; codecs=vp9")
-      ? "video/webm; codecs=vp9"
-      : "video/webm";
-    let mediaRecorder = new MediaRecorder(stream, {
-      mimeType: mime,
-    });
-    let recordedChunks = [];
-    mediaRecorder.addEventListener("dataavailable", (event) => {
-      recordedChunks.push(event.data);
-    });
-    mediaRecorder.addEventListener("stop", () => {
-      let blob = new Blob(recordedChunks, {
-        type: mime,
-      });
-      let href = URL.createObjectURL(blob);
-      download(href, "record.webm");
-      URL.revokeObjectURL(href);
-    });
-    mediaRecorder.start();
+  // add mouse listeners to all elements
+  function addListeners() {
+    for (var i = 0; i < elements.length; i++) {
+      elements[i].onmouseenter = function (event) {
+        if (this.tagName === "A") {
+          try {
+            // template for hover
+            var hover = {
+              tag: this.tagName,
+              offsetX: this.offsetLeft,
+              offsetY: this.offsetTop,
+              mouseX: event.clientX,
+              mouseY: event.clientY,
+              selectors: makeSelector(this),
+              title: this.innerText,
+              type: "body",
+              time: (Date.now() / 1000) | 0,
+              event: "mouseenter",
+            };
+            if (this.href) {
+              hover.url = this.href;
+            } else {
+              hover.url = "";
+            }
+            // check if header
+            checkIfHeader("header", this, hover);
+            modifyRecords("hovers", hover);
+          } catch (e) {
+            console.log(e);
+          }
+        }
+      };
+      elements[i].onmouseleave = function (event) {
+        if (this.tagName === "A") {
+          try {
+            // template for hover
+            var hover = {
+              tag: this.tagName,
+              offsetX: this.offsetLeft,
+              offsetY: this.offsetTop,
+              mouseX: event.clientX,
+              mouseY: event.clientY,
+              selectors: makeSelector(this),
+              title: this.innerText,
+              type: "body",
+              time: (Date.now() / 1000) | 0,
+              event: "mouseenter",
+            };
+            if (this.href) {
+              hover.url = this.href;
+            } else {
+              hover.url = "";
+            }
+            // check if header
+            checkIfHeader("header", this, hover);
+            modifyRecords("hovers", hover);
+          } catch (e) {
+            console.log(e);
+          }
+        }
+      };
+    }
   }
 
   // download function
@@ -255,74 +331,51 @@
     }
   }
 
-  // add listeners to all elements
-  function addListeners() {
-    for (var i = 0; i < elements.length; i++) {
-      elements[i].onclick = function () {
-        // print href
-        if (this.href) {
-          try {
-            // template for click
-            var click = {
-              title: this.innerText,
-              url: this.href,
-              type: "body",
-              time: (Date.now() / 1000) | 0,
-            };
-            // check if header
-            checkIfHeader("header", this, click);
-            modifyRecords("clicks", click);
-          } catch (e) {
-            console.log(e);
-          }
+  // get selector string
+  function makeSelector(el) {
+    var tag,
+      index,
+      stack = [];
+
+    for (; el.parentNode; el = el.parentNode) {
+      tag = el.tagName;
+      if (tag != "HTML") {
+        index = $(el).prevAll().length + 1;
+        if (tag == "BODY") {
+          stack.unshift(tag);
+        } else {
+          stack.unshift(tag + ":nth-child(" + index + ")");
         }
-      };
-      elements[i].onmouseenter = function () {
-        if (this.tagName === "A") {
-          try {
-            // template for hover
-            var hover = {
-              title: this.innerText,
-              type: "body",
-              time: (Date.now() / 1000) | 0,
-              event: "mouseenter",
-            };
-            if (this.href) {
-              hover.url = this.href;
-            } else {
-              hover.url = "";
-            }
-            // check if header
-            checkIfHeader("header", this, hover);
-            modifyRecords("hovers", hover);
-          } catch (e) {
-            console.log(e);
-          }
-        }
-      };
-      elements[i].onmouseleave = function () {
-        if (this.tagName === "A") {
-          try {
-            // template for hover
-            var hover = {
-              title: this.innerText,
-              type: "body",
-              time: (Date.now() / 1000) | 0,
-              event: "mouseleave",
-            };
-            if (this.href) {
-              hover.url = this.href;
-            } else {
-              hover.url = "";
-            }
-            // check if header
-            checkIfHeader("header", this, hover);
-            modifyRecords("hovers", hover);
-          } catch (e) {
-            console.log(e);
-          }
-        }
-      };
+      }
     }
+    return stack.join(" > ");
+  }
+
+  async function createVideoRecorder() {
+    let stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: true,
+    });
+    // recording in mp4 format
+
+    let mime = MediaRecorder.isTypeSupported("video/webm; codecs=vp9")
+      ? "video/webm; codecs=vp9"
+      : "video/webm";
+    let mediaRecorder = new MediaRecorder(stream, {
+      mimeType: mime,
+    });
+    let recordedChunks = [];
+    mediaRecorder.addEventListener("dataavailable", (event) => {
+      recordedChunks.push(event.data);
+    });
+    mediaRecorder.addEventListener("stop", () => {
+      let blob = new Blob(recordedChunks, {
+        type: mime,
+      });
+      let href = URL.createObjectURL(blob);
+      download(href, "record.webm");
+      URL.revokeObjectURL(href);
+    });
+    mediaRecorder.start();
   }
 })();
