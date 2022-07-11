@@ -1,16 +1,30 @@
 // ==UserScript==
-// @name         DPM
+// @name         WMS
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  try to take over the world!
 // @author       You
-// @match        *.dpm.org.cn/*
-// @icon         https://www.dpm.org.cn/favicon.ico
+// @match        *.farfetch.cn/*
+// @icon         https://cdn-static.farfetch-contents.com/assets/portal-core-portal/static/images/favicon/Farfetch/apple-touch-icon-180x180.png
 // @grant        none
 // ==/UserScript==
 
 (function () {
   "use strict";
+  // prevall prototype
+  Element.prototype.prevAll = function () {
+    var _parent = this.parentElement;
+    var _child = _parent.children;
+    var arr = [];
+    for (var i = 0; i < _child.length; i++) {
+      var _childI = _child[i];
+      if (_childI == this) {
+        break;
+      }
+      arr.push(_childI);
+    }
+    return arr;
+  };
 
   // Your code here...
   // set global window storage
@@ -44,12 +58,16 @@
     localStorage.setItem("record", json);
   } else {
     // recording on
-    createElementRC(body);
+    // createElementRC(body);
+    createElementTime(body);
   }
+
+  // hide elements
+  document.getElementsByClassName("info-banners-container")[0].style.display = "none";
 
   // init
   addListeners();
-  createElementTime(body);
+  // createElementTime(body);
 
   // add keyboard listener
   document.addEventListener("keydown", function (e) {
@@ -75,7 +93,8 @@
       console.log(record_tmp);
       // if recording is not exist, create it
       if (document.getElementById("recording") === null) {
-        createElementRC(body);
+        // createElementRC(body);
+        createElementTime(body);
         // createVideoRecorder();
       } else {
         alert("recording...");
@@ -153,6 +172,9 @@
         mouseX: event.clientX,
         mouseY: event.clientY,
         selectors: makeSelector(target),
+        href: target.href,
+        src: target.src,
+        label: target.getAttribute("aria-label"),
       };
       // check if header
       checkIfHeader("header", target, click);
@@ -257,7 +279,7 @@
 
     // set recording styles
     recording.style.position = "fixed";
-    recording.style.top = "6px";
+    recording.style.bottom = "6px";
     recording.style.left = "140px";
     recording.style.width = "12px";
     recording.style.height = "12px";
@@ -265,6 +287,7 @@
     recording.style.borderRadius = "50%";
     recording.style.zIndex = "9999";
     recording.style.animation = "recording 1s infinite";
+    recording.style.visibility = "hidden";
 
     recording.setAttribute("id", "recording");
     elem.appendChild(recording);
@@ -276,14 +299,14 @@
 
     // set time_elem styles
     time_elem.style.position = "fixed";
-    time_elem.style.top = "0";
+    time_elem.style.bottom = "0";
     time_elem.style.left = "0";
-    time_elem.style.width = "130px";
+    time_elem.style.width = "auto";
     time_elem.style.padding = "0 2px 0 2px";
     time_elem.style.color = "white";
     time_elem.style.backgroundColor = "#1c1d1e";
     time_elem.style.opacity = "80%";
-    time_elem.style.fontSize = "large";
+    time_elem.style.fontSize = "small";
     time_elem.style.fontWeight = "bold";
     time_elem.style.fontFamily = "system-ui";
     time_elem.style.zIndex = "9999";
@@ -323,7 +346,8 @@
     if (node.parentNode) {
       if (
         node.parentNode.className === keyword ||
-        node.parentNode.id === keyword
+        node.parentNode.id === keyword ||
+        node.parentNode.tagName === keyword
       ) {
         step.type = keyword;
       } else {
@@ -341,7 +365,7 @@
     for (; el.parentNode; el = el.parentNode) {
       tag = el.tagName;
       if (tag != "HTML") {
-        index = $(el).prevAll().length + 1;
+        index = el.prevAll().length + 1;
         if (tag == "BODY") {
           stack.unshift(tag);
         } else {
